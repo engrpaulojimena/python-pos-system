@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — POS{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="grid grid-4 mb-16">
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(99,102,241,.15);">💰</div>
+    <div>
+      <div class="stat-value">₱{{ "%.2f"|format(stats.today_sales) }}</div>
+      <div class="stat-label">Today's Sales</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(16,185,129,.15);">🧾</div>
+    <div>
+      <div class="stat-value">{{ stats.today_txn }}</div>
+      <div class="stat-label">Transactions Today</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(245,158,11,.15);">📦</div>
+    <div>
+      <div class="stat-value">{{ stats.total_products }}</div>
+      <div class="stat-label">Active Products</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(239,68,68,.15);">⚠️</div>
+    <div>
+      <div class="stat-value {% if stats.low_stock > 0 %}text-danger{% endif %}">{{ stats.low_stock }}</div>
+      <div class="stat-label">Low Stock Items</div>
+    </div>
+  </div>
+</div>
+
+<div class="grid" style="grid-template-columns:1fr 340px;gap:16px;margin-bottom:16px;">
+  <div class="card">
+    <div class="section-title">📈 Sales — Last 7 Days</div>
+    <canvas id="salesChart" height="200"></canvas>
+  </div>
+  <div class="card">
+    <div class="section-title">🔥 Top Products</div>
+    {% if top_products %}
+      {% for p in top_products %}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;">
+        <span>{{ p.product_name }}</span>
+        <div style="text-align:right;">
+          <div style="font-weight:700;">₱{{ "%.2f"|format(p.revenue) }}</div>
+          <div style="font-size:11px;color:var(--muted);">{{ p.qty }} sold</div>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty">No sales data yet</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid grid-2 gap-16">
+  <div class="card">
+    <div class="section-title">
+      ⚠️ Low Stock Alerts
+      {% if low_stock_items %}
+        <a href="{{ url_for('inventory') }}" class="btn btn-sm btn-ghost">View All</a>
+      {% endif %}
+    </div>
+    {% if low_stock_items %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Product</th><th>Stock</th><th>Alert At</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for p in low_stock_items %}
+          <tr>
+            <td>{{ p.name }}</td>
+            <td><strong class="{% if p.stock==0 %}text-danger{% else %}text-warning{% endif %}">{{ p.stock }}</strong></td>
+            <td>{{ p.low_stock_alert }}</td>
+            <td>
+              {% if p.stock == 0 %}
+                <span class="badge badge-danger">Out of Stock</span>
+              {% else %}
+                <span class="badge badge-warning">Low Stock</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <div class="empty">✅ All products sufficiently stocked</div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="section-title">
+      🧾 Recent Transactions
+      <a href="{{ url_for('reports') }}" class="btn btn-sm btn-ghost">View All</a>
+    </div>
+    {% if recent_txn %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Receipt</th><th>Cashier</th><th>Total</th><th>Time</th></tr></thead>
+        <tbody>
+          {% for t in recent_txn %}
+          <tr>
+            <td><span class="badge badge-info">{{ t.receipt_no }}</span></td>
+            <td>{{ t.full_name }}</td>
+            <td><strong>₱{{ "%.2f"|format(t.total) }}</strong></td>
+            <td style="color:var(--muted);font-size:11px;">{{ t.created_at[:16] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <div class="empty">No transactions yet</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+const daily = {{ daily | tojson }};
+const labels = daily.map(d => d.day);
+const data = daily.map(d => d.total || 0);
+
+new Chart(document.getElementById('salesChart'), {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [{
+      label: 'Sales (₱)',
+      data,
+      backgroundColor: 'rgba(99,102,241,.5)',
+      borderColor: '#6366f1',
+      borderWidth: 2,
+      borderRadius: 6,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: '#2d3148' }, ticks: { color: '#64748b' } },
+      y: { grid: { color: '#2d3148' }, ticks: { color: '#64748b', callback: v => '₱'+v } }
+    }
+  }
+});
+</script>
+{% endblock %}

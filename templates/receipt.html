@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Receipt {{ txn.receipt_no }}</title>
+<style>
+body{font-family:'Courier New',monospace;max-width:320px;margin:20px auto;font-size:13px;background:#fff;color:#111;}
+.center{text-align:center;}
+.divider{border-top:1px dashed #666;margin:8px 0;}
+.row{display:flex;justify-content:space-between;margin:3px 0;}
+.total-row{font-size:16px;font-weight:bold;border-top:2px solid #000;margin-top:6px;padding-top:6px;}
+.big{font-size:20px;font-weight:bold;}
+@media print{
+  button{display:none!important;}
+  body{margin:0;}
+}
+</style>
+</head>
+<body>
+<div class="center">
+  <div class="big">🏪 POS SYSTEM</div>
+  <div>Official Receipt</div>
+  <div class="divider"></div>
+  <div>Receipt #: <strong>{{ txn.receipt_no }}</strong></div>
+  <div>Date: {{ txn.created_at[:16] }}</div>
+  <div>Cashier: {{ txn.full_name }}</div>
+</div>
+
+<div class="divider"></div>
+
+{% for item in items %}
+<div>{{ item.product_name }}</div>
+<div class="row" style="padding-left:10px;">
+  <span>{{ item.quantity }} x ₱{{ "%.2f"|format(item.price) }}</span>
+  <span>₱{{ "%.2f"|format(item.subtotal) }}</span>
+</div>
+{% endfor %}
+
+<div class="divider"></div>
+<div class="row"><span>Subtotal:</span><span>₱{{ "%.2f"|format(txn.subtotal) }}</span></div>
+{% if txn.discount > 0 %}
+<div class="row"><span>Discount:</span><span>-₱{{ "%.2f"|format(txn.discount) }}</span></div>
+{% endif %}
+{% if txn.tax > 0 %}
+<div class="row"><span>VAT:</span><span>₱{{ "%.2f"|format(txn.tax) }}</span></div>
+{% endif %}
+<div class="row total-row"><span>TOTAL:</span><span>₱{{ "%.2f"|format(txn.total) }}</span></div>
+<div class="row"><span>Amount Paid:</span><span>₱{{ "%.2f"|format(txn.amount_paid) }}</span></div>
+<div class="row"><span>Change:</span><span>₱{{ "%.2f"|format(txn.change_due) }}</span></div>
+<div class="row"><span>Payment:</span><span>{{ txn.payment_method | upper }}</span></div>
+
+<div class="divider"></div>
+<div class="center" style="margin-top:10px;">
+  <div>Thank you for shopping!</div>
+  <div style="font-size:11px;color:#888;margin-top:4px;">Please come again 😊</div>
+</div>
+
+<br>
+<div style="text-align:center;">
+  <button onclick="window.print()" style="padding:8px 20px;background:#111;color:#fff;border:none;cursor:pointer;border-radius:5px;">🖨️ Print Receipt</button>
+  <button onclick="window.close()" style="padding:8px 20px;background:#ccc;border:none;cursor:pointer;border-radius:5px;margin-left:6px;">Close</button>
+</div>
+</body>
+</html>

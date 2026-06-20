@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}Users{% endblock %}
+{% block page_title %}User Management{% endblock %}
+
+{% block content %}
+<div class="flex-between mb-16">
+  <div style="font-size:13px;color:var(--muted);">{{ users|length }} users total</div>
+  <button class="btn btn-primary" onclick="openModal('addModal')">+ Add User</button>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Created</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td><strong>{{ u.full_name or 'N/A' }}</strong></td>
+          <td><code style="background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:12px;">{{ u.username }}</code></td>
+          <td>
+            {% if u.role == 'admin' %}
+              <span class="badge badge-info">👑 Admin</span>
+            {% else %}
+              <span class="badge badge-success">🛒 Cashier</span>
+            {% endif %}
+          </td>
+          <td style="color:var(--muted);font-size:12px;">{{ u.created_at[:10] if u.created_at else '—' }}</td>
+          <td>
+            {% if u.id != session.user_id %}
+            <form method="post" action="{{ url_for('delete_user', uid=u.id) }}" onsubmit="return confirm('Delete user {{ u.username }}?')">
+              <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+            </form>
+            {% else %}
+              <span style="font-size:12px;color:var(--muted);">You</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ADD USER MODAL -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('addModal')">✕</button>
+    <h3>Add New User</h3>
+    <form method="post" action="{{ url_for('add_user') }}">
+      <div class="form-group mb-16"><label>Full Name</label><input name="full_name" required></div>
+      <div class="form-group mb-16"><label>Username *</label><input name="username" required></div>
+      <div class="form-group mb-16"><label>Password *</label><input name="password" type="password" required></div>
+      <div class="form-group mb-16">
+        <label>Role</label>
+        <select name="role">
+          <option value="cashier">🛒 Cashier</option>
+          <option value="admin">👑 Admin</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;">Create User</button>
+    </form>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px;">
+  <div class="section-title">🔐 Role Permissions</div>
+  <table>
+    <thead><tr><th>Feature</th><th>Admin</th><th>Cashier</th></tr></thead>
+    <tbody>
+      {% for feat, a, c in [
+        ('POS / Checkout', '✅', '✅'),
+        ('View Receipt', '✅', '✅'),
+        ('Dashboard', '✅', '❌'),
+        ('Inventory Management', '✅', '❌'),
+        ('Categories', '✅', '❌'),
+        ('User Management', '✅', '❌'),
+        ('Reports', '✅', '❌'),
+      ] %}
+      <tr><td>{{ feat }}</td><td>{{ a }}</td><td>{{ c }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
