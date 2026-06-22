@@ -422,7 +422,7 @@ def users():
     c.execute("SELECT id, username, role, full_name, created_at FROM users")
     all_users = rows_to_list(c.fetchall())
     c.close(); conn.close()
-    return render_template('users.html', users=all_users)
+    return render_template('users.html', users=all_users, form_error=False)
 
 @app.route('/users/add', methods=['POST'])
 @admin_required
@@ -435,10 +435,45 @@ def add_user():
         c.execute("INSERT INTO users (username, password, role, full_name) VALUES (%s,%s,%s,%s)",
                   (d['username'], pw, d['role'], d['full_name']))
         conn.commit()
-        flash('User added!', 'success')
-    except:
+        flash('User added successfully!', 'success')
+        c.close(); conn.close()
+        return redirect(url_for('users'))
+    except Exception as e:
         conn.rollback()
-        flash('Username already exists.', 'error')
+        c.close(); conn.close()
+        flash('Username already exists. Please choose another.', 'error')
+        # Re-render users page with form data preserved
+        conn2 = get_db()
+        c2 = get_cursor(conn2)
+        c2.execute("SELECT id, username, role, full_name, created_at FROM users")
+        all_users = rows_to_list(c2.fetchall())
+        c2.close(); conn2.close()
+        return render_template('users.html', users=all_users,
+                               form_error=True,
+                               form_data=d)
+
+@app.route('/users/edit/<int:uid>', methods=['POST'])
+@admin_required
+def edit_user(uid):
+    if uid == session['user_id'] and request.form.get('role') != session.get('role'):
+        flash("Cannot change your own role.", 'error')
+        return redirect(url_for('users'))
+    d = request.form
+    conn = get_db()
+    c = get_cursor(conn)
+    try:
+        if d.get('password'):
+            pw = hashlib.sha256(d['password'].encode()).hexdigest()
+            c.execute("UPDATE users SET full_name=%s, role=%s, password=%s WHERE id=%s",
+                      (d['full_name'], d['role'], pw, uid))
+        else:
+            c.execute("UPDATE users SET full_name=%s, role=%s WHERE id=%s",
+                      (d['full_name'], d['role'], uid))
+        conn.commit()
+        flash('User updated!', 'success')
+    except Exception as e:
+        conn.rollback()
+        flash(f'Error updating user: {str(e)}', 'error')
     finally:
         c.close(); conn.close()
     return redirect(url_for('users'))
