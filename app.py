@@ -529,6 +529,20 @@ def api_search():
     c.close(); conn.close()
     return jsonify([dict(p) for p in products])
 
+@app.route('/debug-db')
+def debug_db():
+    url = os.environ.get('DATABASE_URL', 'NOT SET')
+    masked = url[:40] + '...' if len(url) > 40 else url
+    try:
+        conn = get_db()
+        c = get_cursor(conn)
+        c.execute('SELECT version()')
+        version = c.fetchone()
+        c.close(); conn.close()
+        return jsonify({'db_url': masked, 'connected': True, 'version': str(version)})
+    except Exception as e:
+        return jsonify({'db_url': masked, 'connected': False, 'error': str(e)})
+
 if __name__ == "__main__":
     init_db()
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
