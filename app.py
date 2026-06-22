@@ -50,7 +50,7 @@ def init_db():
             category_id INTEGER,
             barcode TEXT,
             image_url TEXT,
-            active INTEGER DEFAULT 1,
+            active BOOLEAN DEFAULT TRUE,
             FOREIGN KEY (category_id) REFERENCES categories(id)
         )
     ''')
@@ -84,6 +84,21 @@ def init_db():
             FOREIGN KEY (product_id) REFERENCES products(id)
         )
     ''')
+
+    # Migrate active column from INTEGER to BOOLEAN if needed
+    c.execute("""
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name='products' AND column_name='active'
+                AND data_type='integer'
+            ) THEN
+                ALTER TABLE products ALTER COLUMN active TYPE BOOLEAN USING active::boolean;
+                ALTER TABLE products ALTER COLUMN active SET DEFAULT TRUE;
+            END IF;
+        END $$;
+    """)
 
     # Seed users
     pw = hashlib.sha256('admin123'.encode()).hexdigest()
@@ -194,9 +209,9 @@ def dashboard():
     today_sales = c.fetchone()['v']
     c.execute("SELECT COUNT(*) as v FROM transactions WHERE DATE(created_at)=%s", (today,))
     today_txn = c.fetchone()['v']
-    c.execute("SELECT COUNT(*) as v FROM products WHERE active=1")
+    c.execute("SELECT COUNT(*) as v FROM products WHERE active=TRUE")
     total_products = c.fetchone()['v']
-    c.execute("SELECT COUNT(*) as v FROM products WHERE stock<=low_stock_alert AND active=1")
+    c.execute("SELECT COUNT(*) as v FROM products WHERE stock<=low_stock_alert AND active=TRUE")
     low_stock = c.fetchone()['v']
 
     stats = {'today_sales': today_sales, 'today_txn': today_txn,
@@ -211,7 +226,7 @@ def dashboard():
     c.execute("""
         SELECT p.*, c.name as cat_name FROM products p
         LEFT JOIN categories c ON p.category_id=c.id
-        WHERE p.stock<=p.low_stock_alert AND p.active=1 ORDER BY p.stock LIMIT 10
+        WHERE p.stock<=p.low_stock_alert AND p.active=TRUE ORDER BY p.stock LIMIT 10
     """)
     low_stock_items = c.fetchall()
 
@@ -241,7 +256,7 @@ def pos():
     c.execute("""
         SELECT p.*, c.name as cat_name, c.color as cat_color FROM products p
         LEFT JOIN categories c ON p.category_id=c.id
-        WHERE p.active=1 AND p.stock>0 ORDER BY p.name
+        WHERE p.active=TRUE AND p.stock>0 ORDER BY p.name
     """)
     products = c.fetchall()
     c.execute("SELECT * FROM categories")
@@ -319,7 +334,7 @@ def inventory():
     c.execute("""
         SELECT p.*, c.name as cat_name, c.color as cat_color FROM products p
         LEFT JOIN categories c ON p.category_id=c.id
-        WHERE p.active=1 ORDER BY p.name
+        WHERE p.active=TRUE ORDER BY p.name
     """)
     products = c.fetchall()
     c.execute("SELECT * FROM categories")
@@ -360,7 +375,7 @@ def edit_product(pid):
 def delete_product(pid):
     conn = get_db()
     c = get_cursor(conn)
-    c.execute("UPDATE products SET active=0 WHERE id=%s", (pid,))
+    c.execute("UPDATE products SET active=FALSE WHERE id=%s", (pid,))
     conn.commit(); c.close(); conn.close()
     flash('Product removed.', 'success')
     return redirect(url_for('inventory'))
@@ -472,7 +487,7 @@ def categories():
     c = get_cursor(conn)
     c.execute("""
         SELECT c.*, COUNT(p.id) as product_count FROM categories c
-        LEFT JOIN products p ON c.id=p.category_id AND p.active=1
+        LEFT JOIN products p ON c.id=p.category_id AND p.active=TRUE
         GROUP BY c.id ORDER BY c.name
     """)
     cats = c.fetchall()
@@ -507,7 +522,7 @@ def delete_category(cid):
 def api_product(pid):
     conn = get_db()
     c = get_cursor(conn)
-    c.execute("SELECT * FROM products WHERE id=%s AND active=1", (pid,))
+    c.execute("SELECT * FROM products WHERE id=%s AND active=TRUE", (pid,))
     p = c.fetchone()
     c.close(); conn.close()
     if p: return jsonify(dict(p))
@@ -522,7 +537,7 @@ def api_search():
     c.execute("""
         SELECT p.*, cat.name as cat_name FROM products p
         LEFT JOIN categories cat ON p.category_id=cat.id
-        WHERE p.active=1 AND p.stock>0 AND (p.name ILIKE %s OR p.barcode=%s)
+        WHERE p.active=TRUE AND p.stock>0 AND (p.name ILIKE %s OR p.barcode=%s)
         LIMIT 20
     """, (f'%{q}%', q))
     products = c.fetchall()
