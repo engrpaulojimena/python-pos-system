@@ -19,6 +19,28 @@ def get_db():
 def get_cursor(conn):
     return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
+
+def rows_to_list(rows):
+    """Convert RealDictRow list to plain dicts with datetime converted to strings."""
+    result = []
+    for row in rows:
+        d = dict(row)
+        for k, v in d.items():
+            if hasattr(v, 'strftime'):
+                d[k] = v.strftime('%Y-%m-%d %H:%M:%S')
+        result.append(d)
+    return result
+
+def row_to_dict(row):
+    """Convert single RealDictRow to plain dict with datetime converted to strings."""
+    if row is None:
+        return None
+    d = dict(row)
+    for k, v in d.items():
+        if hasattr(v, 'strftime'):
+            d[k] = v.strftime('%Y-%m-%d %H:%M:%S')
+    return d
+
 def init_db():
     conn = get_db()
     c = get_cursor(conn)
@@ -221,26 +243,26 @@ def dashboard():
         SELECT DATE(created_at) as day, COALESCE(SUM(total),0) as total, COUNT(*) as txn
         FROM transactions WHERE DATE(created_at) >= %s GROUP BY day ORDER BY day
     """, (week_ago,))
-    daily = c.fetchall()
+    daily = rows_to_list(c.fetchall())
 
     c.execute("""
         SELECT p.*, c.name as cat_name FROM products p
         LEFT JOIN categories c ON p.category_id=c.id
         WHERE p.stock<=p.low_stock_alert AND p.active=TRUE ORDER BY p.stock LIMIT 10
     """)
-    low_stock_items = c.fetchall()
+    low_stock_items = rows_to_list(c.fetchall())
 
     c.execute("""
         SELECT t.*, u.full_name FROM transactions t
         JOIN users u ON t.cashier_id=u.id ORDER BY t.created_at DESC LIMIT 8
     """)
-    recent_txn = c.fetchall()
+    recent_txn = rows_to_list(c.fetchall())
 
     c.execute("""
         SELECT ti.product_name, SUM(ti.quantity) as qty, SUM(ti.subtotal) as revenue
         FROM transaction_items ti GROUP BY ti.product_name ORDER BY qty DESC LIMIT 5
     """)
-    top_products = c.fetchall()
+    top_products = rows_to_list(c.fetchall())
 
     c.close(); conn.close()
     return render_template('dashboard.html', stats=stats, daily=daily,
@@ -316,9 +338,9 @@ def receipt(txn_id):
     conn = get_db()
     c = get_cursor(conn)
     c.execute("SELECT t.*, u.full_name FROM transactions t JOIN users u ON t.cashier_id=u.id WHERE t.id=%s", (txn_id,))
-    txn = c.fetchone()
+    txn = row_to_dict(c.fetchone())
     c.execute("SELECT * FROM transaction_items WHERE transaction_id=%s", (txn_id,))
-    items = c.fetchall()
+    items = rows_to_list(c.fetchall())
     c.close(); conn.close()
     if not txn:
         flash('Transaction not found.', 'error')
@@ -398,7 +420,7 @@ def users():
     conn = get_db()
     c = get_cursor(conn)
     c.execute("SELECT id, username, role, full_name, created_at FROM users")
-    all_users = c.fetchall()
+    all_users = rows_to_list(c.fetchall())
     c.close(); conn.close()
     return render_template('users.html', users=all_users)
 
@@ -449,7 +471,7 @@ def reports():
         WHERE DATE(t.created_at) BETWEEN %s AND %s
         ORDER BY t.created_at DESC
     """, (date_from, date_to))
-    transactions = c.fetchall()
+    transactions = rows_to_list(c.fetchall())
 
     c.execute("""
         SELECT COUNT(*) as txn_count, COALESCE(SUM(total),0) as total_sales,
@@ -457,14 +479,14 @@ def reports():
                COALESCE(AVG(total),0) as avg_sale
         FROM transactions WHERE DATE(created_at) BETWEEN %s AND %s
     """, (date_from, date_to))
-    summary = c.fetchone()
+    summary = row_to_dict(c.fetchone())
 
     c.execute("""
         SELECT DATE(created_at) as day, COUNT(*) as txn, SUM(total) as total
         FROM transactions WHERE DATE(created_at) BETWEEN %s AND %s
         GROUP BY day ORDER BY day
     """, (date_from, date_to))
-    daily = c.fetchall()
+    daily = rows_to_list(c.fetchall())
 
     c.execute("""
         SELECT ti.product_name, SUM(ti.quantity) as qty, SUM(ti.subtotal) as revenue
@@ -473,7 +495,7 @@ def reports():
         WHERE DATE(t.created_at) BETWEEN %s AND %s
         GROUP BY ti.product_name ORDER BY revenue DESC LIMIT 10
     """, (date_from, date_to))
-    top_items = c.fetchall()
+    top_items = rows_to_list(c.fetchall())
 
     c.close(); conn.close()
     return render_template('reports.html', transactions=transactions, summary=summary,
