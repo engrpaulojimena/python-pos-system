@@ -1,20 +1,34 @@
 {% extends 'base.html' %}
 {% block title %}Inventory{% endblock %}
-{% block page_title %}Inventory Management{% endblock %}
+{% block page_title %}Inventory{% endblock %}
+
+{% block extra_head %}
+<style>
+.inv-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+.inv-search{flex:1;min-width:180px;max-width:320px;}
+@media(max-width:600px){
+  .inv-toolbar{gap:8px;}
+  .inv-search{max-width:none;width:100%;}
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="flex-between mb-16">
-  <div style="font-size:13px;color:var(--muted);">{{ products|length }} products total</div>
-  <button class="btn btn-primary" onclick="openModal('addModal')">+ Add Product</button>
+<div class="inv-toolbar">
+  <div style="font-size:13px;color:var(--muted);">{{ products|length }} products</div>
+  <div class="flex flex-wrap" style="gap:8px;">
+    <input class="inv-search" type="text" id="invSearch" placeholder="🔍 Search products..." oninput="filterTable(this.value)">
+    <button class="btn btn-primary" onclick="openModal('addModal')">+ Add Product</button>
+  </div>
 </div>
 
-<div class="card">
+<div class="card" style="padding:0;overflow:hidden;">
   <div class="table-wrap">
-    <table>
+    <table id="invTable">
       <thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Cost</th><th>Stock</th><th>Alert</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>
         {% for p in products %}
-        <tr>
+        <tr data-name="{{ p.name | lower }}">
           <td>
             <div style="font-weight:600;">{{ p.name }}</div>
             {% if p.barcode %}<div style="font-size:11px;color:var(--muted);">{{ p.barcode }}</div>{% endif %}
@@ -42,10 +56,10 @@
             {% endif %}
           </td>
           <td>
-            <div class="flex">
-              <button class="btn btn-sm btn-ghost" onclick='openEdit({{ p | tojson }})'>✏️ Edit</button>
+            <div class="flex" style="gap:4px;flex-wrap:wrap;">
+              <button class="btn btn-sm btn-ghost" onclick='openEdit({{ p | tojson }})'>✏️</button>
               <button class="btn btn-sm btn-primary" onclick="openRestock({{ p.id }}, '{{ p.name }}')">+Stock</button>
-              <form method="post" action="{{ url_for('delete_product', pid=p.id) }}" onsubmit="return confirm('Remove this product?')">
+              <form method="post" action="{{ url_for('delete_product', pid=p.id) }}" onsubmit="return confirm('Remove {{ p.name }}?')" style="display:inline;">
                 <button type="submit" class="btn btn-sm btn-danger">✕</button>
               </form>
             </div>
@@ -64,7 +78,7 @@
 <div class="modal-overlay" id="addModal">
   <div class="modal">
     <button class="modal-close" onclick="closeModal('addModal')">✕</button>
-    <h3>Add New Product</h3>
+    <h3>➕ Add Product</h3>
     <form method="post" action="{{ url_for('add_product') }}">
       <div class="form-group mb-16"><label>Product Name *</label><input name="name" required></div>
       <div class="form-row mb-16">
@@ -93,7 +107,7 @@
 <div class="modal-overlay" id="editModal">
   <div class="modal">
     <button class="modal-close" onclick="closeModal('editModal')">✕</button>
-    <h3>Edit Product</h3>
+    <h3>✏️ Edit Product</h3>
     <form method="post" id="editForm">
       <div class="form-group mb-16"><label>Product Name *</label><input name="name" id="edit_name" required></div>
       <div class="form-row mb-16">
@@ -101,8 +115,8 @@
         <div class="form-group"><label>Cost (₱)</label><input name="cost" id="edit_cost" type="number" step="0.01"></div>
       </div>
       <div class="form-row mb-16">
-        <div class="form-group"><label>Stock Qty</label><input name="stock" id="edit_stock" type="number"></div>
-        <div class="form-group"><label>Low Stock Alert</label><input name="low_stock_alert" id="edit_alert" type="number"></div>
+        <div class="form-group"><label>Stock</label><input name="stock" id="edit_stock" type="number"></div>
+        <div class="form-group"><label>Low Stock Alert</label><input name="low_stock_alert" id="edit_lsa" type="number"></div>
       </div>
       <div class="form-row mb-16">
         <div class="form-group"><label>Category</label>
@@ -120,29 +134,39 @@
 
 <!-- RESTOCK MODAL -->
 <div class="modal-overlay" id="restockModal">
-  <div class="modal" style="min-width:300px;">
+  <div class="modal" style="max-width:360px;">
     <button class="modal-close" onclick="closeModal('restockModal')">✕</button>
-    <h3>Restock Product</h3>
+    <h3>📦 Restock</h3>
     <div style="font-size:13px;color:var(--muted);margin-bottom:14px;" id="restockName"></div>
     <form method="post" id="restockForm">
-      <div class="form-group mb-16"><label>Quantity to Add</label><input name="qty" type="number" min="1" required></div>
-      <button type="submit" class="btn btn-success" style="width:100%;">Add to Stock</button>
+      <div class="form-group mb-16">
+        <label>Add Quantity</label>
+        <input type="number" name="qty" min="1" value="1" required style="font-size:18px;padding:12px;">
+      </div>
+      <button type="submit" class="btn btn-success" style="width:100%;">+ Add Stock</button>
     </form>
   </div>
 </div>
 
 <script>
+function filterTable(q){
+  document.querySelectorAll('#invTable tbody tr').forEach(r=>{
+    r.style.display=r.dataset.name.includes(q.toLowerCase())?'':'none';
+  });
+}
+
 function openEdit(p){
   document.getElementById('edit_name').value=p.name;
   document.getElementById('edit_price').value=p.price;
   document.getElementById('edit_cost').value=p.cost;
   document.getElementById('edit_stock').value=p.stock;
-  document.getElementById('edit_alert').value=p.low_stock_alert;
-  document.getElementById('edit_cat').value=p.category_id||'';
+  document.getElementById('edit_lsa').value=p.low_stock_alert;
   document.getElementById('edit_barcode').value=p.barcode||'';
+  document.getElementById('edit_cat').value=p.category_id||'';
   document.getElementById('editForm').action='/inventory/edit/'+p.id;
   openModal('editModal');
 }
+
 function openRestock(id, name){
   document.getElementById('restockName').textContent='Product: '+name;
   document.getElementById('restockForm').action='/inventory/restock/'+id;

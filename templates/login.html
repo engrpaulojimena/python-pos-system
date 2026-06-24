@@ -3,52 +3,82 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login — POS & Inventory System</title>
+<title>Login — POS System</title>
 <style>
-:root{--bg:#0f1117;--surface:#1a1d27;--border:#2d3148;--accent:#6366f1;--text:#e2e8f0;--muted:#64748b;}
+:root{
+  --bg:#0b0d14;--surface:#13161f;--surface2:#1c2030;
+  --border:#252a3d;--accent:#6366f1;--text:#e2e8f0;--muted:#5a6480;
+}
 *{margin:0;padding:0;box-sizing:border-box;}
-body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;}
-.login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px;width:360px;}
-.brand{text-align:center;margin-bottom:28px;}
-.brand h1{font-size:28px;margin-bottom:6px;}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  padding:16px;
+}
+body::before{
+  content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse at 20% 50%,rgba(99,102,241,.08) 0%,transparent 60%),
+             radial-gradient(ellipse at 80% 20%,rgba(129,140,248,.06) 0%,transparent 50%);
+  pointer-events:none;
+}
+.login-wrap{width:100%;max-width:400px;}
+.login-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:20px;padding:40px 36px;
+  box-shadow:0 24px 64px rgba(0,0,0,.4);
+}
+.brand{text-align:center;margin-bottom:32px;}
+.brand-icon{font-size:40px;display:block;margin-bottom:12px;}
+.brand h1{font-size:22px;font-weight:800;letter-spacing:-.02em;margin-bottom:4px;}
 .brand p{color:var(--muted);font-size:13px;}
 .form-group{margin-bottom:16px;}
-label{display:block;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;}
-input{width:100%;background:#22263a;border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px 14px;font-size:14px;font-family:inherit;transition:.15s;}
-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(99,102,241,.15);}
-.btn{width:100%;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:8px;transition:.15s;}
+label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;}
+input{
+  width:100%;background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;color:var(--text);padding:11px 14px;font-size:14px;
+  font-family:inherit;transition:.15s;
+}
+input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(99,102,241,.12);}
+.btn{
+  width:100%;padding:12px;background:var(--accent);color:#fff;border:none;
+  border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;
+  font-family:inherit;margin-top:8px;transition:.15s;letter-spacing:.01em;
+}
 .btn:hover{background:#4f52c9;}
-.flash{padding:10px 14px;border-radius:7px;margin-bottom:16px;font-size:13px;font-weight:500;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#ef4444;}
-.hint{margin-top:18px;padding:14px;background:#22263a;border-radius:8px;font-size:12px;color:var(--muted);border:1px solid var(--border);}
-.hint strong{color:var(--text);}
+.btn:active{transform:scale(.98);}
+.flash{
+  padding:11px 14px;border-radius:9px;margin-bottom:18px;font-size:13px;font-weight:500;
+  background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#ef4444;
+}
+@media(max-width:440px){
+  .login-card{padding:28px 22px;border-radius:16px;}
+}
 </style>
 </head>
 <body>
-<div class="login-card">
-  <div class="brand">
-    <h1>🏪</h1>
-    <h2 style="font-size:20px;font-weight:700;margin-bottom:4px;">POS System</h2>
-    <p>Point of Sale — Sign in to continue</p>
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="brand">
+      <span class="brand-icon">🏪</span>
+      <h1>POS System</h1>
+      <p>Sign in to continue</p>
+    </div>
+    {% for cat, msg in get_flashed_messages(with_categories=True) %}
+      <div class="flash">{{ msg }}</div>
+    {% endfor %}
+    <form method="post">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" name="username" required autofocus placeholder="Enter your username">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" name="password" required placeholder="Enter your password">
+      </div>
+      <button type="submit" class="btn">Sign In →</button>
+    </form>
   </div>
-  {% for cat, msg in get_flashed_messages(with_categories=True) %}
-    <div class="flash">{{ msg }}</div>
-  {% endfor %}
-  <form method="post">
-    <div class="form-group">
-      <label>Username</label>
-      <input type="text" name="username" required autofocus placeholder="Enter username">
-    </div>
-    <div class="form-group">
-      <label>Password</label>
-      <input type="password" name="password" required placeholder="Enter password">
-    </div>
-    <button type="submit" class="btn">Sign In</button>
-  </form>
-  <!-- <div class="hint">
-    <strong>Default accounts:</strong><br>
-    Admin: <strong>admin</strong> / admin123<br>
-    Cashier: <strong>cashier1</strong> / cashier123
-  </div> -->
 </div>
 </body>
 </html>
