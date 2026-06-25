@@ -51,6 +51,25 @@ input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(99
   padding:11px 14px;border-radius:9px;margin-bottom:18px;font-size:13px;font-weight:500;
   background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#ef4444;
 }
+.demo-box{
+  background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.25);
+  border-radius:14px;padding:14px 16px;margin-bottom:20px;
+}
+.demo-label{
+  display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;
+  color:#a5b4fc;margin-bottom:10px;
+}
+.demo-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.demo-btn{
+  background:rgba(99,102,241,.16);border:1px solid rgba(99,102,241,.35);
+  color:#c7d2fe;font-size:12.5px;font-weight:700;padding:9px 6px;border-radius:9px;
+  cursor:pointer;font-family:inherit;transition:.15s;text-align:center;
+}
+.demo-btn:hover{background:rgba(99,102,241,.28);}
+.demo-btn:active{transform:scale(.97);}
+.demo-note{
+  text-align:center;font-size:11px;color:var(--muted);margin-top:9px;
+}
 @media(max-width:440px){
   .login-card{padding:28px 22px;border-radius:16px;}
 }
@@ -67,18 +86,34 @@ input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(99
     {% for cat, msg in get_flashed_messages(with_categories=True) %}
       <div class="flash">{{ msg }}</div>
     {% endfor %}
-    <form method="post">
+
+    <div class="demo-box">
+      <div class="demo-label">🎭 Try a demo account</div>
+      <div class="demo-btns">
+        <button type="button" class="demo-btn" onclick="fillDemo('admin','admin123')">Demo Admin</button>
+        <button type="button" class="demo-btn" onclick="fillDemo('cashier1','cashier123')">Demo Cashier</button>
+      </div>
+      <p class="demo-note">Admin: admin123 &nbsp;•&nbsp; Cashier: cashier123</p>
+    </div>
+
+    <form method="post" id="loginForm">
       <div class="form-group">
         <label>Username</label>
-        <input type="text" name="username" required autofocus placeholder="Enter your username">
+        <input type="text" name="username" id="username" required autofocus placeholder="Enter your username">
       </div>
       <div class="form-group">
         <label>Password</label>
-        <input type="password" name="password" required placeholder="Enter your password">
+        <input type="password" name="password" id="password" required placeholder="Enter your password">
       </div>
       <button type="submit" class="btn">Sign In →</button>
     </form>
   </div>
 </div>
+<script>
+function fillDemo(username, password){
+  document.getElementById('username').value = username;
+  document.getElementById('password').value = password;
+}
+</script>
 </body>
 </html>
